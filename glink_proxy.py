@@ -49,8 +49,16 @@ async def messages_proxy(request: Request):
                 yield f"data: {json.dumps({'type': 'content_block_start', 'index': 0, 'content_block': {'type': 'text', 'text': ''}})}\n\n"
                 
                 for chunk in response_stream:
-                    if chunk.text:
-                        yield f"data: {json.dumps({'type': 'content_block_delta', 'index': 0, 'delta': {'type': 'text_delta', 'text': chunk.text}})}\n\n"
+                    try:
+                        if chunk.text:
+                            yield f"data: {json.dumps({'type': 'content_block_delta', 'index': 0, 'delta': {'type': 'text_delta', 'text': chunk.text}})}\n\n"
+                    except (ValueError, AttributeError):
+                        # Handle cases where chunk.text is not available (e.g., function calls or safety filters)
+                        if hasattr(chunk, 'candidates') and chunk.candidates:
+                            part = chunk.candidates[0].content.parts[0]
+                            if hasattr(part, 'text') and part.text:
+                                yield f"data: {json.dumps({'type': 'content_block_delta', 'index': 0, 'delta': {'type': 'text_delta', 'text': part.text}})}\n\n"
+                        continue
                 
                 yield f"data: {json.dumps({'type': 'content_block_stop', 'index': 0})}\n\n"
                 yield f"data: {json.dumps({'type': 'message_delta', 'delta': {'stop_reason': 'end_turn', 'stop_sequence': None}, 'usage': {'output_tokens': 0}})}\n\n"
@@ -61,11 +69,21 @@ async def messages_proxy(request: Request):
             chat = model.start_chat(history=gemini_messages[:-1])
             response = chat.send_message(gemini_messages[-1]["parts"][0])
             
+            try:
+                response_text = response.text
+            except (ValueError, AttributeError):
+                # Fallback for function calls or blocked content
+                if response.candidates:
+                    parts = response.candidates[0].content.parts
+                    response_text = " ".join([p.text for p in parts if hasattr(p, 'text')])
+                else:
+                    response_text = "I'm sorry, I couldn't generate a response for that."
+
             anthropic_response = {
                 "id": f"msg_{os.urandom(8).hex()}",
                 "type": "message",
                 "role": "assistant",
-                "content": [{"type": "text", "text": response.text}],
+                "content": [{"type": "text", "text": response_text}],
                 "model": requested_model,
                 "stop_reason": "end_turn",
                 "stop_sequence": None,
