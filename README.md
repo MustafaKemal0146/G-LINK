@@ -82,6 +82,19 @@ G-LINK is specifically optimized for large-scale **Next.js** and **React** devel
 
 ---
 
+## 🤖 Hybrid Identity
+
+When using **G-LINK**, you are effectively giving **Claude's hands** (the CLI tools and terminal agentic logic) the **brain of Gemini**. 
+
+If you ask the agent "Who designed you?" while connected through the bridge, it will correctly identify itself as a model trained by **Google**, as it is now powered by **Gemini 1.5 Pro**. This hybrid setup gives you the best of both worlds: Claude's superior terminal orchestration and Gemini's massive context window.
+
+<div align="center">
+  <img src="image.png" alt="G-LINK Identity Test" width="600"/>
+  <p><em>Example: Gemini 1.5 Pro responding through the Claude Code CLI interface.</em></p>
+</div>
+
+---
+
 ## 📁 Project Structure
 
 ```
